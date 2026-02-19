@@ -51,8 +51,12 @@ export class Player {
                 if (key === 'gear5') {
                     // Remove BLACK background for Gear 5
                     this.images[key] = removeBackground(this.images[key], 'black');
+                } else if (key === 'snakeman') {
+                    // Remove background based on top-left pixel (Violet) - use GLOBAL to catch inside clouds
+                    // Tolerance 30 to catch all violet shades while preserving shoulder
+                    this.images[key] = removeBackground(this.images[key], 'auto', 'global', 30);
                 } else {
-                    // Remove WHITE background for others (Base, G2, G4, Snakeman)
+                    // Remove WHITE background for others (Base, G2, G4)
                     this.images[key] = removeBackground(this.images[key], 'white');
                 }
 
@@ -132,20 +136,20 @@ export class Player {
         else if (this.gear === 1 && this.imagesLoaded.base) spriteToUse = this.images.base;
 
         if (spriteToUse) {
-            // Draw sprite
-            let drawWidth = this.width;
-            let drawHeight = this.height;
-            let drawX = this.x;
-            let drawY = this.y;
+            // Determine Scale
+            let scale = 1.0;
+            if (this.gear === 5) scale = 2.0; // Massive
+            else if (this.gear === 'snakeman') scale = 1.8; // Tall
+            else if (this.gear === 4) scale = 1.5; // Bulky
+            else if (this.gear === 2) scale = 1.2; // Powered up base
 
-            if (this.gear === 5 || this.gear === 4) {
-                // Make Gear 5 and 4 bigger (1.5x)
-                drawWidth = this.width * 1.5;
-                drawHeight = this.height * 1.5;
-                // Adjust position to center it
-                drawX = this.x - (drawWidth - this.width) / 2;
-                drawY = this.y - (drawHeight - this.height); // Grow upwards
-            }
+            // Draw sprite
+            let drawWidth = this.width * scale;
+            let drawHeight = this.height * scale;
+
+            // Adjust position to center it horizontally and grow upwards
+            let drawX = this.x - (drawWidth - this.width) / 2;
+            let drawY = this.y - (drawHeight - this.height);
 
             ctx.drawImage(spriteToUse, drawX, drawY, drawWidth, drawHeight);
 
