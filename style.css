@@ -1,0 +1,39 @@
+body {
+  margin: 0;
+  display: flex;
+  place-items: center;
+  min-width: 320px;
+  min-height: 100vh;
+  background-color: #242424;
+  justify-content: center;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+#app {
+  position: relative;
+}
+
+#gameCanvas {
+  background: url('/background.png') center/cover no-repeat, url('/background.jpg') center/cover no-repeat, linear-gradient(to bottom, #1e3c72 0%, #2a5298 100%);
+  /* Layers: PNG -> JPG -> Gradient */
+  border: 4px solid #333;
+  box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+  display: block;
+}
+
+#ui-layer {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  pointer-events: none;
+}
+
+#score {
+  font-size: 24px;
+  font-weight: bold;
+  color: #333;
+  background: rgba(255, 255, 255, 0.8);
+  padding: 5px 10px;
+  border-radius: 5px;
+  border: 2px solid #333;
+}
