@@ -1,13 +1,14 @@
 import { BoroBreath } from './BoroBreath.js';
+import { removeBackground } from './utils.js';
 
 export class Boss {
     constructor(game) {
         this.game = game;
         this.level = 1; // Start level
         this.baseX = this.game.width / 2;
-        this.baseY = 100; // Hover height
-        this.width = 150;
-        this.height = 150;
+        this.baseY = 0; // Removed top margin
+        this.width = (this.game.width / 3) * 1.5; // 1.5x wider (now 1/2 screen width)
+        this.height = 200; // Reduced height
         this.x = this.baseX - this.width / 2;
         this.y = -200; // Start off-screen
         this.speedX = 2;
@@ -21,7 +22,7 @@ export class Boss {
         this.markedForDeletion = false;
 
         this.attackTimer = 0;
-        this.attackInterval = 2000; // Shoot every 2 seconds
+        this.attackInterval = Math.random() * 2000 + 1000; // Random between 1s-3s
 
         this.image = new Image();
         this.image.src = '/kaido.png';
@@ -29,6 +30,8 @@ export class Boss {
 
         this.image.onload = () => {
             if (this.image.naturalWidth > 0) {
+                // Assuming Kaido has a white background unless specified
+                this.image = removeBackground(this.image, 'white');
                 this.imageLoaded = true;
             }
         };
@@ -78,6 +81,7 @@ export class Boss {
             if (this.attackTimer > this.attackInterval) {
                 this.attackTimer = 0;
                 this.shoot();
+                this.attackInterval = Math.random() * 2000 + 1000; // Randomize next interval
             } else {
                 this.attackTimer += deltaTime;
             }

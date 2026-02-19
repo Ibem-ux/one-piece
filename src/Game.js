@@ -12,6 +12,8 @@ export class Game {
         this.score = 0;
         this.lives = 3;
         this.gameOver = false;
+
+        this.updateLivesUI();
         this.lastTime = 0;
         this.player = new Player(this);
         this.items = [];
@@ -30,6 +32,13 @@ export class Game {
         this.weatherTimer = 0;
         this.weatherDuration = 10000; // Change weather every 10s
         this.windForce = 0;
+    }
+
+    updateLivesUI() {
+        const livesEl = document.getElementById('lives');
+        if (livesEl) {
+            livesEl.innerHTML = '❤️'.repeat(Math.max(0, this.lives));
+        }
     }
 
     start() {
@@ -83,13 +92,20 @@ export class Game {
 
         // --- Boss Logic ---
         // Check for Spawn
+        let nextThreshold;
         if (this.bossLevel < this.bossThresholds.length) {
-            const nextThreshold = this.bossThresholds[this.bossLevel];
-            if (this.score >= nextThreshold && !this.boss) {
-                this.boss = new Boss(this);
-                this.boss.reset(this.bossLevel + 1);
-                console.log(`BOSS SPAWNED! Level ${this.bossLevel + 1}`);
-            }
+            nextThreshold = this.bossThresholds[this.bossLevel];
+        } else {
+            // "And so on" logic: Add 1000 for each level beyond the fixed ones
+            // Base is 1000 (last fixed).
+            // Level 4 -> 2000. Level 5 -> 3000.
+            nextThreshold = 1000 + (this.bossLevel - 3) * 1000;
+        }
+
+        if (this.score >= nextThreshold && !this.boss) {
+            this.boss = new Boss(this);
+            this.boss.reset(this.bossLevel + 1);
+            console.log(`BOSS SPAWNED! Level ${this.bossLevel + 1} at Score ${this.score} (Threshold: ${nextThreshold})`);
         }
 
         if (this.boss) {
@@ -104,7 +120,7 @@ export class Game {
                     // PARRY! Deflected back!
                     p.parried = true;
                     p.speedY = -15; // Shoot up fast
-                    this.score += 50;
+                    this.score += 10; // Reduced from 50
                     console.log("Parried! Deflecting back to Boss!");
                 }
                 // 2. Check Boss Collision (Parried Breath hitting Boss)
@@ -130,17 +146,11 @@ export class Game {
             this.projectiles = this.projectiles.filter(p => !p.markedForDeletion);
 
             // Boss Collision (Body Hit) - Disabled to focus on Parry
-            /*
-            if (this.checkCollision(this.player, this.boss)) {
-                if (this.boss.speedY >= 0) {
-                    this.boss.hit();
-                }
-            }
-            */
 
             if (this.boss.markedForDeletion) {
                 // Boss Defeated!
-                this.score += 1000 * (this.bossLevel + 1);
+                const points = 10 * (this.bossLevel + 1); // Significantly reduced to prevent skipping thresholds
+                this.score += points;
                 this.boss = null;
                 this.bossLevel++;
                 this.projectiles = [];
@@ -156,8 +166,11 @@ export class Game {
         // Only spawn items if NO BOSS is active
         if (!this.boss) {
             if (this.itemTimer > this.itemInterval) {
-                if (Math.random() < 0.2) { // 20% chance for Devil Fruit
-                    this.items.push(new DevilFruit(this));
+                const r = Math.random();
+                if (r < 0.2) { // 20% Good Fruit
+                    this.items.push(new DevilFruit(this, 'GOOD'));
+                } else if (r < 0.35) { // 15% Bad Fruit (0.2 + 0.15)
+                    this.items.push(new DevilFruit(this, 'BAD'));
                 } else {
                     this.items.push(new Meat(this));
                 }
@@ -175,35 +188,53 @@ export class Game {
             if (this.checkCollision(this.player, item)) {
                 item.markedForDeletion = true;
 
-                // Points Logic
-                this.score += item.points;
+                if (item instanceof DevilFruit && item.type === 'BAD') {
+                    // Bad Fruit Logic
+                    this.lives--;
+                    this.updateLivesUI();
 
-                // Transformation Logic (Thresholds: 100 -> G2, 250 -> G4, 500 -> Snake, 1000 -> G5)
-                if (this.score >= 1000 && this.player.gear !== 5) {
-                    this.player.setGear(5);
-                } else if (this.score >= 500 && this.score < 1000 && this.player.gear !== 'snakeman') {
-                    this.player.setGear('snakeman');
-                } else if (this.score >= 250 && this.score < 500 && this.player.gear !== 4) {
-                    this.player.setGear(4);
-                } else if (this.score >= 100 && this.score < 250 && this.player.gear !== 2) {
-                    this.player.setGear(2);
+                    if (this.lives <= 0) {
+                        this.gameOver = true;
+                        document.getElementById('game-over').style.display = 'block';
+                    }
+                    console.log("Ate a Bad Devil Fruit! Lives decreased.");
+                } else {
+                    // Good Item Logic (Meat or Good Fruit)
+                    this.score += item.points;
+
+                    // Transformation Logic (Only for Good Fruits/Meat affecting score thresholds)
+                    if (this.score >= 1000 && this.player.gear !== 5) {
+                        this.player.setGear(5);
+                    } else if (this.score >= 500 && this.score < 1000 && this.player.gear !== 'snakeman') {
+                        this.player.setGear('snakeman');
+                    } else if (this.score >= 250 && this.score < 500 && this.player.gear !== 4) {
+                        this.player.setGear(4);
+                    } else if (this.score >= 100 && this.score < 250 && this.player.gear !== 2) {
+                        this.player.setGear(2);
+                    }
+
+                    // Update score UI
+                    const scoreEl = document.getElementById('score');
+                    if (scoreEl) scoreEl.innerText = `Score: ${this.score}`;
                 }
-
-                // Update score UI
-                const scoreEl = document.getElementById('score');
-                if (scoreEl) scoreEl.innerText = `Score: ${this.score}`;
             }
 
             // Check Miss (Lives Logic)
             if (!item.markedForDeletion && item.y > this.height) {
                 item.markedForDeletion = true;
-                this.lives--;
-                const livesEl = document.getElementById('lives');
-                if (livesEl) livesEl.innerText = `Lives: ${this.lives}`;
 
-                if (this.lives <= 0) {
-                    this.gameOver = true;
-                    document.getElementById('game-over').style.display = 'block';
+                // Only lose life if it's a GOOD item (Meat or Good Fruit)
+                // If it's a BAD fruit, letting it fall is GOOD.
+                let isBadFruit = (item instanceof DevilFruit && item.type === 'BAD');
+
+                if (!isBadFruit) {
+                    this.lives--;
+                    this.updateLivesUI();
+
+                    if (this.lives <= 0) {
+                        this.gameOver = true;
+                        document.getElementById('game-over').style.display = 'block';
+                    }
                 }
             }
         });
